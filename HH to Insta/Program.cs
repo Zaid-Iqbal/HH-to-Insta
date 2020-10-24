@@ -44,8 +44,8 @@ namespace HH_to_Insta
             wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.XPath("//button [@type='button']")));
 
             driver.FindElement(By.XPath("//button [@type='button']")).Click();
-            driver.FindElement(By.XPath("//input[@aria-label='Phone number, username, or email']")).SendKeys("hardwarehubdeals@gmail.com");
-            driver.FindElement(By.XPath("//input[@aria-label='Password']")).SendKeys("exioite33");
+            driver.FindElement(By.XPath("//input[@aria-label='Phone number, username, or email']")).SendKeys("EMAIL");
+            driver.FindElement(By.XPath("//input[@aria-label='Password']")).SendKeys("PASSWORD");
             driver.FindElement(By.XPath("//div [contains(text(),'Log In')]")).Click();
             try
             {
