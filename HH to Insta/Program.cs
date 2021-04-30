@@ -1,44 +1,27 @@
-﻿using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using AutoIt;
-using InstagramApiSharp;
 using InstagramApiSharp.API;
 using InstagramApiSharp.Classes;
 using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Logger;
 using InstagramApiSharp.Classes.Models;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Support.UI;
-using OpenQA.Selenium.Remote;
-using InstaSharp.Models;
-using System.Drawing;
+using System.Data.SqlClient;
 
 namespace HH_to_Insta
 {
     class Program
     {
-        public static IWorkbook Twb = new XSSFWorkbook(@"C:\Users\email\Desktop\Hardware Hub\Twitter code files\Twitter.xlsx");
-        public static ISheet Tws = Twb.GetSheetAt(0);
-
-        //public static IWebDriver driver = new ChromeDriver(GetMobileView());
-        //public static WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(5));
-
-
         public static UserSessionData userSession = getCreds();
         public static IInstaApi api = InstaApiBuilder.CreateBuilder()
                                         .SetUser(userSession)
                                         .UseLogger(new DebugLogger(InstagramApiSharp.Logger.LogLevel.All))
                                         .Build();
+
+        public static String cs = System.IO.File.ReadAllLines(@"C:\Users\email\Desktop\Hardware Hub\SQL Connection String.txt")[0];
+        public static SqlConnection con = new SqlConnection(cs);
+
         static void Main(string[] args)
         {
             //GoToInsta();
@@ -46,6 +29,10 @@ namespace HH_to_Insta
             //driver.Close();
         }
 
+        /// <summary>
+        /// Gets auth tokens needed to interact with instagram api
+        /// </summary>
+        /// <returns></returns>
         public static UserSessionData getCreds()
         {
             String[] lines = System.IO.File.ReadAllLines(@"C:\Users\email\Desktop\Hardware Hub\Twitter code files\Hardware Hub Access Tokens (Instagram).txt");
@@ -56,18 +43,25 @@ namespace HH_to_Insta
             };                  
         }
 
+        /// <summary>
+        /// Gets the ID of the next product that needs to be tweeted. Looks for the product with todays date
+        /// </summary>
+        /// <returns></returns>
         public static string getNextID()
         {
-            for (int x = 1; x <= Tws.LastRowNum; x++)
-            {
-                if (Tws.GetRow(x).Cells[2].ToString() == "No")
-                {
-                    return Tws.GetRow(x).Cells[1].ToString();
-                }
-            }
-            MessageBox.Show("Excel.getNextID() Error: Unsent ID not found (Check if there are unsent tweets scheduled in Twitter.xlsx)");
-            return "Not Found";
+            con.Open();
 
+            SqlCommand cmd = new SqlCommand("SELECT [ID] FROM Posts WHERE [Date] = CAST(GETDATE() AS DATE)", con);
+            SqlDataReader Reader = cmd.ExecuteReader();
+
+            if (Reader.Read())
+            {
+                String ID = Reader[0].ToString();
+                Reader.Close();
+                return ID;
+            }
+            Reader.Close();
+            return "None";
         }
 
         /// <summary>
@@ -131,16 +125,21 @@ namespace HH_to_Insta
         /// <returns></returns>
         public static string getInstaBody(string ID)
         {
-            for (int x = 1; x <= Tws.LastRowNum; x++)
+            SqlCommand cmd = new SqlCommand($"SELECT [Body] FROM Posts WHERE [ID] = '{ID}'", con);
+            SqlDataReader Reader = cmd.ExecuteReader();
+
+            if (Reader.Read())
             {
-                if (Tws.GetRow(x).Cells[1].ToString() == ID)
-                {
-                    String send = Tws.GetRow(x).Cells[5].ToString();
-                    return send.Substring(send.IndexOf(":") + 2);
-                }
+                String str = Reader.GetString(0);
+                str = str.Substring(str.IndexOf(':') + 2);
+                Reader.Close();
+                return str;
             }
-            MessageBox.Show("Excel.getNextID() Error: Body not found (Check if there are unsent tweets scheduled in Twitter.xlsx)");
-            return "Not Found";
+            else
+            {
+                Reader.Close();
+                return "None";
+            }
         }
 
         /// <summary>
@@ -176,39 +175,6 @@ namespace HH_to_Insta
                 return ms.ToArray();
             }
         }
-
-        //public static void GoToInsta()
-        //{
-        //    driver.Navigate().GoToUrl("https://www.instagram.com/");
-        //    wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.XPath("//button [@type='button']")));
-
-        //    driver.FindElement(By.XPath("//button [@type='button']")).Click();
-        //    driver.FindElement(By.XPath("//input[@aria-label='Phone number, username, or email']")).SendKeys("hardwarehubdeals@gmail.com");
-        //    driver.FindElement(By.XPath("//input[@aria-label='Password']")).SendKeys("exioite33");
-        //    driver.FindElement(By.XPath("//div [contains(text(),'Log In')]")).Click();
-        //    try
-        //    {
-        //        wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.XPath("//div [@class = 'eiCW-']")));
-        //        MessageBox.Show("Unable to connect to Internet");
-        //    }
-        //    catch (WebDriverTimeoutException)
-        //    {
-        //    }
-        //    try
-        //    {
-        //        wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.XPath("//button [@class = 'aOOlW   HoLwm ']")))[0].Click();
-        //        wait.Until(ExpectedConditions.PresenceOfAllElementsLocatedBy(By.XPath("//div [@class = 'cmbtv']")))[0].Click();
-        //    }
-        //    catch (WebDriverTimeoutException)
-        //    {
-        //    }
-        //}
-        //public static ChromeOptions GetMobileView()
-        //{
-        //    ChromeOptions chromeOptions = new ChromeOptions();
-        //    chromeOptions.EnableMobileEmulation("iPhone 6");
-        //    return chromeOptions;
-        //}
     }
 
 
